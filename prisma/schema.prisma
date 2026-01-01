@@ -27,6 +27,25 @@ model User {
   password String
   rating Int @default(0)
   level ProfileLevel @default(noob)  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  refreshToken RefreshToken[]
+}
+
+
+model RefreshToken {
+  id String @id @default(uuid())
+  token String 
+  revoked Boolean @default(false) 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  userId String
+  user User @relation(fields: [userId], references: [id])
+
+
+  @@index([token])
+  @@index([userId], type: Hash)
 }
 
 
