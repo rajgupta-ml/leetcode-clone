@@ -26,6 +26,20 @@ enum UserRole {
   student
 }
 
+enum Verdict {
+  wrong
+  success
+  tle
+}
+
+enum SupportedLanguages {
+  c
+  cPlusPlus
+  python
+  java
+  javascript
+}
+
 model User {
   id String @id @default(uuid())
   email String @unique
@@ -36,6 +50,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
   refreshToken RefreshToken[]
+  submission Submission[]
+  solutions Solutions[]
 }
 
 
@@ -55,3 +71,48 @@ model RefreshToken {
 }
 
 
+model Questions {
+  id  String @id @default(uuid()) 
+  question String
+  question_title  String
+  question_rating String
+  question_level ProfileLevel
+
+  testcase String[]
+  examples String[]
+
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  submission Submission[]
+  solution Solutions[]
+}
+
+
+model Solutions {
+  id String @id @default(uuid())
+  questionId String
+  solution String
+  authorId String
+  language SupportedLanguages
+    
+  author User @relation(fields: [authorId], references: [id])
+  question Questions @relation(fields: [questionId], references: [id])
+}
+ 
+
+model Submission {
+  id String @id @default(uuid())
+  questionId String
+  userId String
+  verdict Verdict
+  languagde SupportedLanguages
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  
+  question Questions @relation(fields: [questionId],references: [id])
+  user User @relation(fields: [userId], references: [id])
+}

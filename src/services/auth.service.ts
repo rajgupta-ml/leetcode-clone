@@ -4,12 +4,13 @@ import { prisma } from "../utils/db";
 import { signJWT, signRefreshToken, verifyJWT } from "../utils/token";
 
 import type { JwtPayload } from "jsonwebtoken";
+import type { UserRole } from "../generated/prisma/enums";
 const OTP_TTL = 60 * 2
 
 
-const createTokenAndPersist = async (email : string, id : string) => {
-    const jwt = signJWT({email : email, id : id})
-    const refreshToken = signRefreshToken({email : email, id : id})
+const createTokenAndPersist = async (email : string, id : string, role : UserRole) => {
+    const jwt = signJWT({email : email, id : id, role})
+    const refreshToken = signRefreshToken({email : email, id : id, role})
 
 
    await prisma.refreshToken.create({
@@ -64,7 +65,7 @@ const authService = {
         }
 
 
-        const {jwt, refreshToken} = await createTokenAndPersist(user.email, user.id)
+        const {jwt, refreshToken} = await createTokenAndPersist(user.email, user.id, user.role)
         return {
             id: user.id,
             email: user.email,
@@ -102,7 +103,8 @@ const authService = {
 
         const { jwt, refreshToken } = await createTokenAndPersist(
             payload.email,
-            payload.id
+            payload.id,
+            payload.role
           )
 
           return {jwt , refreshToken}
