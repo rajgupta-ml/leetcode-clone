@@ -1,10 +1,10 @@
-import {compare, hash } from "bcrypt"
+import {compare, hash} from "bcrypt"
 import {redis} from "bun"
 import { prisma } from "../utils/db";
-import { signJWT, signRefreshToken } from "../utils/token";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
-import { email } from "zod";
-const OTP_TTL = 60 * 1000 * 2
+import { signJWT, signRefreshToken, verifyJWT } from "../utils/token";
+
+import type { JwtPayload } from "jsonwebtoken";
+const OTP_TTL = 60 * 2
 
 
 const createTokenAndPersist = async (email : string, id : string) => {
@@ -27,7 +27,7 @@ const authService = {
     sendOtp : async (data : {email : string, password : string}) => {
 
         const otp = Math.floor(100000 + Math.random() * 900000);
-        const payload = {email : data.email, password: data.password, otp}
+        const payload = {email : data.email, password: hash(data.password, 12), otp}
         redis.set(data.email, JSON.stringify(payload), "EX", OTP_TTL)
         return otp
     },
@@ -63,14 +63,6 @@ const authService = {
             user = existingUser
         }
 
-        await prisma.refreshToken.updateMany({
-            data : {
-                revoked : true
-            },
-            where : {
-                userId : user.id
-            }
-        })
 
         const {jwt, refreshToken} = await createTokenAndPersist(user.email, user.id)
         return {
@@ -83,7 +75,66 @@ const authService = {
         }
     },
 
-    refreshToken : async (receivedToken : string) => {
+    refreshToken : async (receivedRefreshToken : string) => {
+        const payload = verifyJWT(receivedRefreshToken) as JwtPayload
+
+        if(!payload  || !payload.id) {
+            throw new Error("Invalid refresh token")
+        }
+
+
+        const storedToken = await prisma.refreshToken.findFirst({
+            where : {
+                token : receivedRefreshToken,
+                revoked : false,
+                userId  : payload.id
+            }
+        })
+
+        if(!storedToken) {
+            throw new Error("Refresh Token revoked not found")
+        }
+
+        await prisma.refreshToken.update({
+            where : {id : storedToken.id},
+            data : {revoked : true}
+        })
+
+        const { jwt, refreshToken } = await createTokenAndPersist(
+            payload.email,
+            payload.id
+          )
+
+          return {jwt , refreshToken}
+
+    },
+
+    logout : async (receivedRefreshToken : string) => {
+        const payload = verifyJWT(receivedRefreshToken) as JwtPayload
+        if(!payload || !payload.id) {
+            throw new Error("Invalid Token")
+        }
+
+        const storedToken = await prisma.refreshToken.findFirst({
+            where : {
+                revoked : false,
+                token : receivedRefreshToken,
+                userId : payload.id
+            }
+        })
+
+        if(!storedToken) {
+            throw new Error("The user is not signedIn")
+        }
+        
+        await prisma.refreshToken.update({
+            where : {
+                id : storedToken.id,
+            },
+            data : {
+                revoked : true
+            }
+        })
 
     }
 

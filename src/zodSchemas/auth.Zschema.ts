@@ -12,3 +12,9 @@ export const verifyOtpSchema = z.object({
     email : z.email(),
     otp : z.string().length(6)
 })
+
+export const refreshTokenSchema = z.object({
+    token : z.string()
+})
+
+

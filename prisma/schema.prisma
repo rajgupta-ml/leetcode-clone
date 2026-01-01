@@ -21,10 +21,16 @@ enum ProfileLevel {
   king
 }
 
+enum UserRole {
+  admin
+  student
+}
+
 model User {
   id String @id @default(uuid())
   email String @unique
   password String
+  role UserRole @default(student)
   rating Int @default(0)
   level ProfileLevel @default(noob)  
   createdAt DateTime @default(now())

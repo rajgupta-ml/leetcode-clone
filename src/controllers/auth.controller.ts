@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { sendOtpSchema, verifyOtpSchema } from "../zodSchemas/auth.Zschema";
+import { refreshTokenSchema, sendOtpSchema, verifyOtpSchema } from "../zodSchemas/auth.Zschema";
 import {redis} from "bun"
 import authService from "../services/auth.service";
 const authController = {
@@ -17,11 +17,10 @@ const authController = {
 
         try {
             const otp = await authService.sendOtp(data)
+            console.log(`The OTP is: ${otp}`)
             res.status(200).json({
                 success : true,
-                data : {
-                    otp : otp
-                }
+                data : {}
             })
             
         } catch (error) {
@@ -59,7 +58,67 @@ const authController = {
         }
 
 
+    },
+    refreshToken : async (req : Request, res : Response) => {
+        const {success, data} = refreshTokenSchema.safeParse(req.body)
+        if(!success) {
+            res.status(400).json({
+                sucess : false,
+                error : "Invalid Request data"
+            })
+            return 
+        }
+
+        try {
+            const payload = await authService.refreshToken(data.token)
+            res.status(200).json({
+                success : true,
+                data : payload
+            })
+        } catch (error) {
+            // This should be a different class so that 500 error can be diffrentated
+            if(error instanceof Error){
+                res.status(500).json({
+                    success : false,
+                    error : error.message
+                })
+            }
+        }
+    },
+
+
+    logout : async (req : Request, res : Response) => {
+        const {success, data } = refreshTokenSchema.safeParse(req.body)
+        if(!success) {
+            res.status(400).json({
+                sucess : false,
+                error : "Invalid Request data"
+            })
+            return 
+        }
+
+        try {
+            await authService.logout(data.token)
+            res.status(200).json({
+                success : true,
+                data : {}
+            })
+        } catch (error) {
+            // This should be a different class so that 500 error can be diffrentated
+            if(error instanceof Error){
+                res.status(500).json({
+                    success : false,
+                    error : error.message
+                })
+            }
+        }
+
+
+        
     }
+
+
+
 }
 
 
